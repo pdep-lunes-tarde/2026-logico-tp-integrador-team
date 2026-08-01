@@ -23,7 +23,6 @@ habitante(eisen, 1150, enano, riegel).
 con_vida(Nombre, Agno) :-
     habitante(Nombre, Nacido, elfo, _),
     Agno > Nacido.
-
 con_vida(Nombre, Agno) :-
     habitante(Nombre, Nacido, Raza, _),
     promedio_vida(Raza, Prom),
@@ -32,7 +31,6 @@ con_vida(Nombre, Agno) :-
 
 promedio_vida(humano, 80).
 promedio_vida(enano, 350).
-
 
 
 % ---------- Punto 2: los recuerdos ----------
@@ -44,76 +42,97 @@ promedio_vida(enano, 350).
 % Voll leyó en 1400 un libro de 50 páginas sobre la hazaña destruir al demonio Aura, llevada a cabo por Denken en Auberst.
 % Serie leyó en 1335 un libro de 100 páginas sobre la hazaña destruir al Rey Demonio, llevada a cabo en Ende por Frieren, Himmel, Heiter y Eisen.
 % Kanne presenció en 1375 la hazaña recuperar al gato perdido, llevada a cabo en Weise por Himmel y Frieren.
+% hazagna(nombre, participes, lugar)
+% conoce(persona, ↑ hazagna ↑, forma_de_recordar, agno)
+% eg: hazagna("Rescatar hermana Wirbel", participes(stark, fern), klares).
 
-% hazagna(persona, forma_de_recordar, nombre_hazagna, año, lugar, participes)
-hazagna(wirbel, prescenciar, "Rescatar hermana Wirbel", 1390, klares, participes(stark, fern)).
-hazagna(frieren, prescenciar, "Rescatar hermana Wirbel", 1390, klares, participes(stark, fern)).
-hazagna(lawine, escuchar, "Destruir demonio Aura", 1393, weise, participes(frieren)).
-hazagna(voll, libro(50), "Destruir demonio Aura", 1400, auberst, participes(denken)).
-hazagna(serie, libro(100), "Destruir Rey Demonio", 1335, ende, participes(frieren, himmel, heiter, eisen)).
-hazagna(kanne, prescenciar, "Recuperar gato perdido", 1375, weise, (himmel, frieren)).
+conoce(wirbel, hazagna("Rescatar hermana Wirbel", participes(stark, fern), klares), presenciar, 1390).
+conoce(frieren, hazagna("Rescatar hermana Wirbel", participes(stark, fern), klares), presenciar, 1390).
+conoce(lawine, hazagna("Destruir demonio Aura", participes(frieren), weise), escuchar, 1393).
+conoce(voll, hazagna("Destruir demonio Aura", participes(denken), auberst), leer(50), 1400).
+conoce(serie, hazagna("Destruir Rey Demonio", participes(frieren, himmel, heiter, eisen), ende), leer(100), 1335).
+conoce(kanne, hazagna("Recuperar gato perdido", participes(himmel, frieren), weise), presenciar, 1375).
 
 % a) Queremos poder contestar sí una hazaña es recordada por alguien en cierto año, sabiendo que:
 % si una persona presenció una hazaña, la recuerda desde ese momento por el resto de su vida.
 % si una persona escuchó una canción sobre una hazaña, la recuerda por 15 años.
 % si una persona leyó un libro sobre una hazaña, la recuerda por tantos años como páginas tenga el libro.
-recuerda_en(Hazagna, Nombre, Agno) :-
+recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
     con_vida(Nombre, Agno),
-    hazagna(Nombre, prescenciar, Hazagna, Ocurrida_En, _, _),
-    Ocurrida_En =< Agno.
+    conoce(Nombre, hazagna(Nombre_Hazagna, _, _), presenciar, Agno_Conoce),
+    Agno_Conoce =< Agno. % ya verificamos que esté con vida
+    
+recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
+    con_vida(Nombre, Agno),
+    conoce(Nombre, hazagna(Nombre_Hazagna, _, _), escuchar, Agno_Conoce),
+    Agno_Conoce =< Agno, Agno =< Agno_Conoce + 15.
 
-recuerda_en(Hazagna, Nombre, Agno) :-
+recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
     con_vida(Nombre, Agno),
-    hazagna(Nombre, escuchar, Hazagna, Ocurrida_En, _, _),
-    Ocurrida_En =< Agno, Agno =< Ocurrida_En + 15.
-
-recuerda_en(Hazagna, Nombre, Agno) :-
-    con_vida(Nombre, Agno),
-    hazagna(Nombre, libro(Paginas), Hazagna, Ocurrida_En, _, _),
-    Ocurrida_En =< Agno, Agno =< Ocurrida_En + Paginas.
+    conoce(Nombre, hazagna(Nombre_Hazagna, _, _), leer(Pags), Agno_Conoce),
+    Agno_Conoce =< Agno, Agno =< Agno_Conoce + Pags.
 
 % b) Queremos contestar sí una hazaña está o no corroborada. Una hazaña está corroborada si solo hay una versión de la misma, y no lo está si hubo diferentes personas que la conocieron con distintos detalles (ya sea diferentes personas que la llevaron a cabo o diferente lugar en el que ocurrió la hazaña). No importa el año o si las personas las recuerdan al mismo tiempo para esto.
-version_distinta(Hazagna) :-
-    hazagna(N1, _, Hazagna, _, Lugar1, _),
-    hazagna(N2, _, Hazagna, _, Lugar2, _),
-    N1 \= N2,
-    Lugar1 \= Lugar2.
-version_distinta(Hazagna) :-
-    hazagna(N1, _, Hazagna, _, _, Participes1),
-    hazagna(N2, _, Hazagna, _, _, Participes2),
-    N1 \= N2,
-    Participes1 \= Participes2.
-corroborada(Hazagna) :-
-    hazagna(_, _, Hazagna, _, _, _),
-    not(version_distinta(Hazagna)).
+version_distinta(Nombre_Hazagna) :-
+    conoce(N1, hazagna(Nombre_Hazagna, Part1, _), _, _),
+    conoce(N2, hazagna(Nombre_Hazagna, Part2, _), _, _),
+    N1 \= N2, Part1 \= Part2.
+version_distinta(Nombre_Hazagna) :-
+    conoce(N1, hazagna(Nombre_Hazagna, _, Lugar1), _, _),
+    conoce(N2, hazagna(Nombre_Hazagna, _, Lugar2), _, _),
+    N1 \= N2, Lugar1 \= Lugar2.
+
+corroborada(Nombre_Hazagna) :-
+    conoce(_, hazagna(Nombre_Hazagna, _, _), _, _),
+    not(version_distinta(Nombre_Hazagna)).
 
 % c) Queremos saber si en cierto año una hazaña pasó al olvido, lo cuál ocurre si ya nadie la recuerda en ese año.
-olvidada_en(Hazagna, Agno) :- 
-    hazagna(_, _, Hazagna, _, _, _),
-    not(recuerda_en(Hazagna, _, Agno)).
+olvidada_en(Nombre_Hazagna, Agno) :- 
+    conoce(_, hazagna(Nombre_Hazagna, _, _), _, _),
+    not(recuerda_en(Nombre_Hazagna, _, Agno)).
 
 
 % ---------- Punto 3: conmemorando hazañas ----------
 
-
 % Algunos pueblos decidieron conmemorar hazañas de diferentes maneras para evitar que pasen al olvido.
-
 % El pueblo de Weise conmemora la hazaña destruir al rey demonio (llevada a cabo en Ende por Frieren, Himmel, Heiter y Eisen) con un día festivo. Esta celebración comenzó en el año 1340.
 % El pueblo de Auberst construyó estatuas:
-% en 1370 la estatua de bronce “el equipo de heroes”, conmemorando la hazaña destruir al rey demonio llevada a cabo en Ende por Frieren, Himmel, Heiter y Eisen.
-% A esta estatua se le hizo mantenimiento en el año 1400 y en el 1450.
+% en 1370 la estatua de bronce “el equipo de heroes”, conmemorando la hazaña destruir al rey demonio llevada a cabo en Ende por Frieren, Himmel, Heiter y Eisen. A esta estatua se le hizo mantenimiento en el año 1400 y en el 1450.
+% en 1340 la estatua de mármol “el héroe del sur” conmemorando la hazaña destruir a Schlat el Omnisciente, llevada a cabo en Ende por el Héroe del Sur. A esta estatua se le hizo mantenimiento en el año 1410.
+%conmemora(pueblo, forma (y su data), agno_inicio,
+%   hazagna)
+conmemora(weise, dia_festivo, 1340, 
+    hazagna("Destruir Rey Demonio", participes(frieren, himmel, heiter, eisen), ende)).
+conmemora(auberst, estatua(bronce, "el equipo de heroes", mantenimiento(1400, 1450)), 1370,
+    hazagna("Destruir Rey Demonio", participes(frieren, himmel, heiter, eisen), ende)).
+conmemora(auberst, estatua(marmol, "el héroe del sur", mantenimiento(1410)), 1340,
+    hazagna("Destruir Schlat Omnisciente", participes(heroe_del_sur), ende)).
 
-% en 1340 la estatua de mármol “el héroe del sur” conmemorando la hazaña destruir a Schlat el Omnisciente, llevada a cabo en Ende por el Héroe del Sur.
-% A esta estatua se le hizo mantenimiento en el año 1410.
-
-
+% ↑↑↑
 % a) Agregar a la base de conocimientos las maneras en las que los pueblos conmemoran las hazañas.
 
-
 % b) Además de lo dicho en el punto 2, agregar que una persona también conoció una hazaña si:
-
 % en el pueblo en el que vive se celebra un día festivo conmemorando la hazaña. Estas hazañas las recuerdan toda su vida, igual que las hazañas que fueron presenciadas.
 % en el pueblo en el que vive hay alguna estatua que conmemora la hazaña. Estas hazañas son recordadas si la estatua sigue en buen estado.
+
+% hazagna(nombre, participes, lugar)
+% conoce(persona, ↑ hazagna ↑, forma_de_recordar, agno) ESTAS SIN EL AÑO (podría agregarse igual)
+conoce(Nombre, hazagna(Nombre_Hazagna, _, _), dia_festivo, Agno_Conoce) :- 
+    habitante(Nombre, Agno_Nacido, _, Pueblo),
+    conmemora(Pueblo, dia_festivo, Agno_Conmemora, hazagna(Nombre_Hazagna, _, _)),
+    con_vida(Nombre, Agno_Conmemora), 
+    AgnoConoce is min_member(Agno_Nacido, Agno_Conmemora). % de guía de lenguajes
+conoce(Nombre, hazagna(Nombre_Hazagna, _, _), estatua(_, _, _), Agno_Conoce) :- 
+    habitante(Nombre, Agno_Nacido, _, Pueblo),
+    conmemora(Pueblo, estatua, Agno_Conmemora, hazagna(Nombre_Hazagna, _, _)),
+    con_vida(Nombre, Agno_Conmemora), 
+    AgnoConoce is min_member(Agno_Nacido, Agno_Conmemora).
+
+
+recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
+    con_vida(Nombre, Agno),
+    conoce(Nombre, hazagna(Nombre_Hazagna, _, _), dia_festivo, Agno_Conoce),
+    Agno_Conoce =< Agno.
 
 %  Una estatua está en buen estado…:
 % sí es de mármol, si tuvo un mantenimiento o fue construida hace no más de 30 años.
