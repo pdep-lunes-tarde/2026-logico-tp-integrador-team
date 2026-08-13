@@ -74,8 +74,8 @@ conoce(Nombre, hazagna(Nombre_Hazagna, _, _), Conmemoracion, Agno_Conocio) :-
     habitante(Nombre, Agno_Nacido, _, Pueblo),
     conmemora(Pueblo, Conmemoracion, hazagna(Nombre_Hazagna, _, _)),
     inicio_conmemoracion(Conmemoracion, Agno_Conmemora), % inicio_conmemoracion "descompone" ya sea dia_festivo o estatua
-    Agno_Conocio is max(Agno_Nacido, Agno_Conmemora).
-    con_vida(Nombre, Agno_Conocio),
+    Agno_Conocio is max(Agno_Nacido, Agno_Conmemora),
+    con_vida(Nombre, Agno_Conocio).
 
 inicio_conmemoracion(dia_festivo(Agno), Agno).
 inicio_conmemoracion(estatua(Agno, _, _, _), Agno).
@@ -112,10 +112,10 @@ recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
     conoce(Nombre, hazagna(Nombre_Hazagna, _, _), Forma, Agno_Conocio),
     Agno_Conocio =< Agno,
     dentro_limite(Agno_Conocio, Agno, Forma).
-dentro_limite(Agno_Conocio, Agno, presenciar).
+dentro_limite(_, _, presenciar).
 dentro_limite(Agno_Conocio, Agno, escuchar) :- Agno =< Agno_Conocio + 15.
 dentro_limite(Agno_Conocio, Agno, leer(Pags)) :- Agno =< Agno_Conocio + Pags.
-dentro_limite(Agno_Conocio, Agno, dia_festivo(_)).
+dentro_limite(_, _, dia_festivo(_)).
 dentro_limite(_, Agno, estatua(Agno_Construida, Material, _, Agnos_Mantenimiento)) :-
     buen_estado(estatua(Agno_Construida, Material, _, Agnos_Mantenimiento), Agno). 
     % en caso de usar alternativa sin listas para estatua (ver abajo), no necesita Agnos_Mantenimiento
