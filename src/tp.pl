@@ -1,5 +1,6 @@
 
 
+
 % ---------- Punto 1: la gente ----------
 
 habitante(denken, 1290, humano, auberst).
@@ -14,23 +15,40 @@ habitante(lernen, 1315, humano, auberst).
 habitante(frieren, 100, elfo, weise).
 habitante(eisen, 1150, enano, riegel).
 
-con_vida(Nombre, Agno) :-
+/*con_vida(Nombre, Agno) :-
     habitante(Nombre, Nacido, elfo, _),
     Agno > Nacido.
 con_vida(Nombre, Agno) :-
     habitante(Nombre, Nacido, Raza, _),
     promedio_vida(Raza, Prom),
     Agno >= Nacido,
-    Agno - Nacido =< Prom.
+    Agno - Nacido =< Prom.*/
+% con_vida tienen un poco de lógica repetida, no se les ocurre una manera de hacer un solo predicado esta vivo agrupando la lógica de cuando muere en otro predicado distinto?
+% --- CORRECCIÓN: ---
+con_vida(Nombre, Agno) :-
+    habitante(Nombre, Agno_Nacido, Raza, _),
+    Agno >= Agno_Nacido, 
+    Edad is Agno - Agno_Nacido,
+    esta_vivo(Raza, Edad).
+
+esta_vivo(elfo, _).
+esta_vivo(Raza, Edad) :-
+    promedio_vida(Raza, Prom),
+    Edad =< Prom.
 
 promedio_vida(humano, 80).
 promedio_vida(enano, 350).
+
 
 
 % ---------- Punto 2: los recuerdos ----------
 % hazagna(nombre, participes, lugar)
 % conoce(persona, ↑ hazagna ↑, forma_de_recordar, agno)
 % eg: hazagna("Rescatar hermana Wirbel", [stark, fern], klares).
+
+% Recuerden que aun no vimos listas, no se les ocurre como hacer los participantes de otra manera?
+% --- ALTERNATIVA SIN LISTAS (que de hecho fue la primera idea): ---
+% hazagna("Rescatar hemana Wirbel", participes(stark, fren), klares)
 
 conoce(wirbel, hazagna("Rescatar hermana Wirbel", [stark, fern], klares), presenciar, 1390).
 conoce(frieren, hazagna("Rescatar hermana Wirbel", [stark, fern], klares), presenciar, 1390).
@@ -39,19 +57,31 @@ conoce(voll, hazagna("Destruir demonio Aura", [denken], auberst), leer(50), 1400
 conoce(serie, hazagna("Destruir Rey Demonio", [frieren, himmel, heiter, eisen], ende), leer(100), 1335).
 conoce(kanne, hazagna("Recuperar gato perdido", [himmel, frieren], weise), presenciar, 1375).
 
-conoce(Nombre, hazagna(Nombre_Hazagna, _, _), dia_festivo(Agno_Conmemora), Agno_Conoce) :- 
+
+/*conoce(Nombre, hazagna(Nombre_Hazagna, _, _), dia_festivo(Agno_Conmemora), Agno_Conoce) :- 
     habitante(Nombre, Agno_Nacido, _, Pueblo),
     conmemora(Pueblo, dia_festivo(Agno_Conmemora), hazagna(Nombre_Hazagna, _, _)),
     Agno_Conoce is max(Agno_Nacido, Agno_Conmemora),
     con_vida(Nombre, Agno_Conoce).
-
 conoce(Nombre, hazagna(Nombre_Hazagna, _, _), estatua(Agno_Conmemora, Material, _, Mantenimiento), Agno_Conoce) :- 
     habitante(Nombre, Agno_Nacido, _, Pueblo),
     conmemora(Pueblo, estatua(Agno_Conmemora, Material, _, Mantenimiento), hazagna(Nombre_Hazagna, _, _)),
     Agno_Conoce is max(Agno_Nacido, Agno_Conmemora),
-    con_vida(Nombre, Agno_Conoce).
+    con_vida(Nombre, Agno_Conoce).*/
+%En conoce sobre los días festivos y estatuas devuelta hay repetición de lógica. Fijense que pasaría si sacan el año de creación/inicio de celebración afuera de la conmemoración en si, podrían reducir las definiciones?
+% --- CORRECCIÓN: ---
+conoce(Nombre, hazagna(Nombre_Hazagna, _, _), Conmemoracion, Agno_Conocio) :-
+    habitante(Nombre, Agno_Nacido, _, Pueblo),
+    conmemora(Pueblo, Conmemoracion, hazagna(Nombre_Hazagna, _, _)),
+    inicio_conmemoracion(Conmemoracion, Agno_Conmemora), % inicio_conmemoracion "descompone" ya sea dia_festivo o estatua
+    Agno_Conocio is max(Agno_Nacido, Agno_Conmemora).
+    con_vida(Nombre, Agno_Conocio),
 
-recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
+inicio_conmemoracion(dia_festivo(Agno), Agno).
+inicio_conmemoracion(estatua(Agno, _, _, _), Agno).
+
+
+/*recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
     con_vida(Nombre, Agno),
     conoce(Nombre, hazagna(Nombre_Hazagna, _, _), presenciar, Agno_Conoce),
     Agno_Conoce =< Agno. % ya verificamos que esté con vida
@@ -74,7 +104,21 @@ recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
     con_vida(Nombre, Agno),
     conoce(Nombre, hazagna(Nombre_Hazagna, _, _), estatua(Agno_Construida, Material, _, Mantenimiento), Agno_Conoce),
     buen_estado(estatua(Agno_Construida, Material, _, Mantenimiento), Agno),
-    Agno_Conoce =< Agno.
+    Agno_Conoce =< Agno.*/
+% Hay números mágicos en recuerda_en, y bastante repetición de lógica. Busquen una manera de evitarla, con algún predicado extra.
+% --- CORRECCIÓN: ---
+recuerda_en(Nombre_Hazagna, Nombre, Agno) :-
+    con_vida(Nombre, Agno),
+    conoce(Nombre, hazagna(Nombre_Hazagna, _, _), Forma, Agno_Conocio),
+    Agno_Conocio =< Agno,
+    dentro_limite(Agno_Conocio, Agno, Forma).
+dentro_limite(Agno_Conocio, Agno, presenciar).
+dentro_limite(Agno_Conocio, Agno, escuchar) :- Agno =< Agno_Conocio + 15.
+dentro_limite(Agno_Conocio, Agno, leer(Pags)) :- Agno =< Agno_Conocio + Pags.
+dentro_limite(Agno_Conocio, Agno, dia_festivo(_)).
+dentro_limite(_, Agno, estatua(Agno_Construida, Material, _, Agnos_Mantenimiento)) :-
+    buen_estado(estatua(Agno_Construida, Material, _, Agnos_Mantenimiento), Agno). 
+    % en caso de usar alternativa sin listas para estatua (ver abajo), no necesita Agnos_Mantenimiento
 
 version_distinta(Nombre_Hazagna) :-
     conoce(N1, hazagna(Nombre_Hazagna, Part1, _), _, _),
@@ -98,6 +142,14 @@ olvidada_en(Nombre_Hazagna, Agno) :-
 
 %conmemora(pueblo, forma (y su data + agno_inicio),
 %   hazagna)
+% Mismo tema de definir con listas los años de mantenimiento de las estatuas, piensen otra alternativa.
+% --- ALTERNATIVA SIN LISTAS: ---
+% eg:
+% conmemora(auberst, estatua(1370, bronce, "el equipo de heroes"),
+%   hazagna("Destruir Rey Demonio", participes(frieren, himmel, heiter, eisen), ende)).
+% mantenimiento(estatua(1370, bronce, "el equipo de heroes"), 1400).
+% mantenimiento(estatua(1370, bronce, "el equipo de heroes"), 1450).
+
 conmemora(weise, dia_festivo(1340), 
     hazagna("Destruir Rey Demonio", [frieren, himmel, heiter, eisen], ende)).
 conmemora(auberst, estatua(1370, bronce, "el equipo de heroes", [1400, 1450]),
@@ -105,10 +157,26 @@ conmemora(auberst, estatua(1370, bronce, "el equipo de heroes", [1400, 1450]),
 conmemora(auberst, estatua(1340, marmol, "el héroe del sur", [1410]),
     hazagna("Destruir Schlat Omnisciente", [heroe_del_sur], ende)).
 
-buen_estado(estatua(Agno_Construida, bronce, _, _), Agno) :- Agno =< Agno_Construida + 15.
-buen_estado(estatua(_, bronce, _, Mantenimiento), Agno) :- member(X, Mantenimiento), X=< Agno, Agno =< X + 15. % de guia de lenguajes
-buen_estado(estatua(Agno_Construida, marmol, _, _), Agno) :- Agno =< Agno_Construida + 30.
-buen_estado(estatua(_, marmol, _, Mantenimiento), Agno) :- member(X, Mantenimiento), X=< Agno, Agno =< X + 30.
+buen_estado(estatua(Agno_Construida, Material, _, _), Agno) :- 
+    limite_material(Material, Limite),
+    Agno =< Agno_Construida + Limite.
+buen_estado(estatua(_, Material, _, Mantenimiento), Agno) :- 
+    limite_material(Material, Limite),
+    member(X, Mantenimiento), 
+    X=< Agno, Agno =< X + Limite.
+
+% --- ALTERNATIVA SIN LISTAS (o sea, sin la lista Mantenimiento, sino usando mantenimiento(Estatua, Agno)) [ver comentarios arriba]: ---
+/*buen_estado(estatua(Agno_Construida, Material, _), Agno) :- 
+    limite_material(Material, Limite),
+    Agno =< Agno_Construida + Limite.
+buen_estado(estatua(Agno_Construida, Material, Nombre), Agno) :-
+    limite_material(Material, Limite),
+    mantenimiento(estatua(Agno_Construida, Material, Nombre), Agno_Mantenimiento),
+    Agno_Mantenimiento =< Agno, Agno =< Agno_Mantenimiento + Limite.*/
+
+limite_material(bronce, Limite) :- Limite is 15. 
+limite_material(marmol, Limite) :- Limite is 30. 
+
 
 
 % ---------- Tests ----------
