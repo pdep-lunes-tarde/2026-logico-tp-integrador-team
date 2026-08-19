@@ -178,7 +178,11 @@ buen_estado(estatua(Agno_Construida, Material, Nombre), Agno) :-
 limite_material(bronce, Limite) :- Limite is 15. 
 limite_material(marmol, Limite) :- Limite is 30. 
 
+
+
 % -------------------- PARTE 2 --------------------
+
+
 
 % ---------- Punto 4 ----------
 
@@ -207,13 +211,15 @@ ninguna llevada a cabo por fern, sin embargo, en los tests se dice que fern→de
 inspiro_a(fern, denken).
 
 % Queremos conocer las cadenas de inspiración entre héroes. Esto es, partiendo de un héroe inicial, todos los diferentes caminos por los que influenció a otros héroes.
-cadena_de_inspiracion(NombreInicial, NombreFinal, [NombreInicial, NombreFinal]) :- inspiro_a(NombreInicial, NombreFinal).
-cadena_de_inspiracion(NombreInicial, NombreFinal, Cadena) :-
-    NombreInicial \= NombreFinal, % no es inversible, pero bueno cumple :/ (podría ligarse con es_heroe(NombreInicial) y es_heroe(NombreFinal)?)
+cadena_de_inspiracion(NombreInicial, NombreFinal, Cadena) :- cadena_visitados(NombreInicial, NombreFinal, [NombreInicial], Cadena).
+    
+cadena_visitados(NombreInicial, NombreFinal, _, [NombreInicial, NombreFinal]) :- inspiro_a(NombreInicial, NombreFinal).
+cadena_visitados(NombreInicial, NombreFinal, Visitados, Cadena) :-
+    NombreInicial \= NombreFinal,
     inspiro_a(NombreInicial, Proxy),
-    cadena_de_inspiracion(Proxy, NombreFinal, Proximos),
-    append([NombreInicial], Proximos, Cadena).
-
+    not(member(Proxy, Visitados)),
+    cadena_visitados(Proxy, NombreFinal, [Proxy|Visitados], Proximos), % Visitados se construye "a la inversa" que Cadena
+    append([NombreInicial], Proximos, Cadena). % append está en la guía
 
 
 % ---------- Punto 6 ----------
