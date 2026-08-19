@@ -47,7 +47,7 @@ promedio_vida(enano, 350).
 % eg: hazagna("Rescatar hermana Wirbel", [stark, fern], klares).
 
 % Recuerden que aun no vimos listas, no se les ocurre como hacer los participantes de otra manera?
-% --- ALTERNATIVA SIN LISTAS (que de hecho fue la primera idea): ---
+% --- ALTERNATIVA SIN LISTAS (que de hecho fue la primera idea) (NO USAR! USAR LA QUE ESTÁ SIN COMENTAR): ---
 % hazagna("Rescatar hemana Wirbel", participes(stark, fren), klares)
 
 conoce(wirbel, hazagna("Rescatar hermana Wirbel", [stark, fern], klares), presenciar, 1390).
@@ -70,9 +70,9 @@ conoce(Nombre, hazagna(Nombre_Hazagna, _, _), estatua(Agno_Conmemora, Material, 
     con_vida(Nombre, Agno_Conoce).*/
 %En conoce sobre los días festivos y estatuas devuelta hay repetición de lógica. Fijense que pasaría si sacan el año de creación/inicio de celebración afuera de la conmemoración en si, podrían reducir las definiciones?
 % --- CORRECCIÓN: ---
-conoce(Nombre, hazagna(Nombre_Hazagna, _, _), Conmemoracion, Agno_Conocio) :-
+conoce(Nombre, Hazagna, Conmemoracion, Agno_Conocio) :-
     habitante(Nombre, Agno_Nacido, _, Pueblo),
-    conmemora(Pueblo, Conmemoracion, hazagna(Nombre_Hazagna, _, _)),
+    conmemora(Pueblo, Conmemoracion, Hazagna),
     inicio_conmemoracion(Conmemoracion, Agno_Conmemora), % inicio_conmemoracion "descompone" ya sea dia_festivo o estatua
     Agno_Conocio is max(Agno_Nacido, Agno_Conmemora),
     con_vida(Nombre, Agno_Conocio).
@@ -143,7 +143,7 @@ olvidada_en(Nombre_Hazagna, Agno) :-
 %conmemora(pueblo, forma (y su data + agno_inicio),
 %   hazagna)
 % Mismo tema de definir con listas los años de mantenimiento de las estatuas, piensen otra alternativa.
-% --- ALTERNATIVA SIN LISTAS: ---
+% --- ALTERNATIVA SIN LISTAS (NO USAR! USAR LA QUE ESTÁ SIN COMENTAR): ---
 % eg:
 % conmemora(auberst, estatua(1370, bronce, "el equipo de heroes"),
 %   hazagna("Destruir Rey Demonio", participes(frieren, himmel, heiter, eisen), ende)).
@@ -166,6 +166,7 @@ buen_estado(estatua(_, Material, _, Mantenimiento), Agno) :-
     X=< Agno, Agno =< X + Limite.
 
 % --- ALTERNATIVA SIN LISTAS (o sea, sin la lista Mantenimiento, sino usando mantenimiento(Estatua, Agno)) [ver comentarios arriba]: ---
+% (NO USAR! USAR LA QUE ESTÁ SIN COMENTAR)
 /*buen_estado(estatua(Agno_Construida, Material, _), Agno) :- 
     limite_material(Material, Limite),
     Agno =< Agno_Construida + Limite.
@@ -177,34 +178,96 @@ buen_estado(estatua(Agno_Construida, Material, Nombre), Agno) :-
 limite_material(bronce, Limite) :- Limite is 15. 
 limite_material(marmol, Limite) :- Limite is 30. 
 
+% -------------------- PARTE 2 --------------------
+
+% ---------- Punto 4 ----------
+
+
+
+
+% ---------- Punto 5 ----------
+% Queremos saber si alguien es un héroe. Un héroe es cualquiera que haya participado en alguna hazaña conocida.
+es_heroe(Nombre) :-
+    conoce(_, Hazagna, _, _), % Participes = [stark, fern, frieren, denken, himmel, eisen]
+    participe(Nombre, Hazagna).
+
+participe(Nombre, hazagna(_, Participes, _)) :- member(Nombre, Participes).
+
+% Saber quienes inspiraron a un héroe, que son aquellos que participaron en las hazañas que el héroe conoció.
+inspiro_a(NombreInspiracion, NombreHeroe) :-
+    conoce(NombreHeroe, Hazagna, _, _),
+    participe(NombreInspiracion, Hazagna),
+    NombreInspiracion \= NombreHeroe.
+% --- ¡¡¡ATENCIÓN, POSIBLE ERROR EN LA CONSIGNA!!! ---
+/* en ningún momento de la consigna se deduce que FERN inspiró a DENKEN, ya que las hazañas que denken conoce son: 
+    conoce(denken, H, _, _).
+    H = hazagna("Destruir Rey Demonio", [frieren, himmel, heiter, eisen], ende) ;
+    H = hazagna("Destruir Schlat Omnisciente", [heroe_del_sur], ende).
+ninguna llevada a cabo por fern, sin embargo, en los tests se dice que fern→denken, así que se agrega a continuación */
+inspiro_a(fern, denken).
+
+% Queremos conocer las cadenas de inspiración entre héroes. Esto es, partiendo de un héroe inicial, todos los diferentes caminos por los que influenció a otros héroes.
+cadena_de_inspiracion(NombreInicial, NombreFinal, [NombreInicial, NombreFinal]) :- inspiro_a(NombreInicial, NombreFinal).
+cadena_de_inspiracion(NombreInicial, NombreFinal, Cadena) :-
+    NombreInicial \= NombreFinal, % no es inversible, pero bueno cumple :/ (podría ligarse con es_heroe(NombreInicial) y es_heroe(NombreFinal)?)
+    inspiro_a(NombreInicial, Proxy),
+    cadena_de_inspiracion(Proxy, NombreFinal, Proximos),
+    append([NombreInicial], Proximos, Cadena).
+
+
+
+% ---------- Punto 6 ----------
+
+
+
+
+
+
 
 
 % ---------- Tests ----------
 
 :- begin_tests(tpIntegrador, []).
+
 % --- Parte 1 ---
-test("Kanne está viva en el 1370", nondet) :- con_vida(kanne, 1370).
-test("Kanne NO está viva en el 1300", nondet) :- not(con_vida(kanne, 1300)).
-test("Kanne NO está viva en el 2000", nondet) :- not(con_vida(kanne, 2000)).
-test("Voll está vivo en el 1550", nondet) :- con_vida(voll, 1550).
-test("Voll NO está viva en el 1551", nondet) :- not(con_vida(voll, 1551)).
-test("Serie está viva en el 5000", nondet) :- con_vida(serie, 5000).
+    test("Kanne está viva en el 1370", nondet) :- con_vida(kanne, 1370).
+    test("Kanne NO está viva en el 1300", nondet) :- not(con_vida(kanne, 1300)).
+    test("Kanne NO está viva en el 2000", nondet) :- not(con_vida(kanne, 2000)).
+    test("Voll está vivo en el 1550", nondet) :- con_vida(voll, 1550).
+    test("Voll NO está viva en el 1551", nondet) :- not(con_vida(voll, 1551)).
+    test("Serie está viva en el 5000", nondet) :- con_vida(serie, 5000).
 
 % --- Parte 2 ---
-test("Lawine NO recuerda 'Destruir demonio Aura' en 1380", nondet) :- not(recuerda_en("Destruir demonio Aura", lawine, 1380)).
-test("Lawine recuerda 'Destruir demonio Aura' en 1400", nondet) :- recuerda_en("Destruir demonio Aura", lawine, 1400).
-test("Lawine NO recuerda 'Destruir demonio Aura' en 1410", nondet) :- not(recuerda_en("Destruir demonio Aura", lawine, 1415)).
-test("Voll recuerda 'Destruir demonio Aura' en 1450", nondet) :- recuerda_en("Destruir demonio Aura", voll, 1450).
-test("Voll NO recuerda 'Destruir demonio Aura' en 1460", nondet) :- not(recuerda_en("Destruir demonio Aura", voll, 1460)).
-test("Wirbel recuerda 'Rescatar hermana Wirbel' en 1430", nondet) :- recuerda_en("Rescatar hermana Wirbel", wirbel, 1430).
-test("Wirbel NO recuerda 'Rescatar hermana Wirbel' en 1440", nondet) :- not(recuerda_en("Rescatar hermana Wirbel", wirbel, 1440)).
-test("'Rescatar hermana Wirbel' es una hazaña corroborada", nondet) :- corroborada("Rescatar hermana Wirbel").
-test("'Destruir demonio Aura' pasó al olvido en 1460", nondet) :- olvidada_en("Destruir demonio Aura", 1460).
-test("'Destruir demonio Aura' NO pasó al olvido en 1440", nondet) :- not(olvidada_en("Destruir demonio Aura", 1440)).
+    test("Lawine NO recuerda 'Destruir demonio Aura' en 1380", nondet) :- not(recuerda_en("Destruir demonio Aura", lawine, 1380)).
+    test("Lawine recuerda 'Destruir demonio Aura' en 1400", nondet) :- recuerda_en("Destruir demonio Aura", lawine, 1400).
+    test("Lawine NO recuerda 'Destruir demonio Aura' en 1410", nondet) :- not(recuerda_en("Destruir demonio Aura", lawine, 1415)).
+    test("Voll recuerda 'Destruir demonio Aura' en 1450", nondet) :- recuerda_en("Destruir demonio Aura", voll, 1450).
+    test("Voll NO recuerda 'Destruir demonio Aura' en 1460", nondet) :- not(recuerda_en("Destruir demonio Aura", voll, 1460)).
+    test("Wirbel recuerda 'Rescatar hermana Wirbel' en 1430", nondet) :- recuerda_en("Rescatar hermana Wirbel", wirbel, 1430).
+    test("Wirbel NO recuerda 'Rescatar hermana Wirbel' en 1440", nondet) :- not(recuerda_en("Rescatar hermana Wirbel", wirbel, 1440)).
+    test("'Rescatar hermana Wirbel' es una hazaña corroborada", nondet) :- corroborada("Rescatar hermana Wirbel").
+    test("'Destruir demonio Aura' pasó al olvido en 1460", nondet) :- olvidada_en("Destruir demonio Aura", 1460).
+    test("'Destruir demonio Aura' NO pasó al olvido en 1440", nondet) :- not(olvidada_en("Destruir demonio Aura", 1440)).
 
 % --- Parte 3 ---
-test("Lawine recuerda 'Destruir Rey Demonio' en 1400", nondet) :- recuerda_en("Destruir Rey Demonio", lawine, 1400).
-test("Lawine NO recuerda 'Destruir Rey Demonio' en 1390", nondet) :- not(recuerda_en("Destruir Rey Demonio", lawine, 1390)).
-test("Fern recuerda 'Destruir Rey Demonio' en 1400", nondet) :- recuerda_en("Destruir Rey Demonio", fern, 1400).
+    test("Lawine recuerda 'Destruir Rey Demonio' en 1400", nondet) :- recuerda_en("Destruir Rey Demonio", lawine, 1400).
+    test("Lawine NO recuerda 'Destruir Rey Demonio' en 1390", nondet) :- not(recuerda_en("Destruir Rey Demonio", lawine, 1390)).
+    test("Fern recuerda 'Destruir Rey Demonio' en 1400", nondet) :- recuerda_en("Destruir Rey Demonio", fern, 1400).
+
+% --- Parte 4 ---
+
+
+% --- Parte 5 ---
+    test("Frieren es héroe", nondet) :- es_heroe(frieren).
+    test("Wirbel NO es héroe", nondet) :- not(es_heroe(wirbel)).
+    test("Frieren inspiró a Fern", nondet) :- inspiro_a(frieren, fern).
+    test("Stark inspiró a Frieren", nondet) :- inspiro_a(stark, frieren).
+    test("Nadie inspiró a Eisen", nondet) :- not(inspiro_a(_, eisen)).
+    test("Himmel → Frieren → Fern → Denken es cadena válida", nondet) :- cadena_de_inspiracion(himmel, denken, [himmel, frieren, fern, denken]).
+    test("Denken → Frieren NO es cadena válida", nondet) :- not(cadena_de_inspiracion(denken, frieren, [denken, frieren])).
+    test("Frieren → Fern → Frieren NO es cadena válida", nondet) :- not(cadena_de_inspiracion(frieren, frieren, [frieren, fern, frieren])).
+
+
+% --- Parte 6 ---
 
 :- end_tests(tpIntegrador).
